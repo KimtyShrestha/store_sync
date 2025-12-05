@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'onboarding3_screen.dart';
 
 class Onboarding2Screen extends StatelessWidget {
   const Onboarding2Screen({super.key});
@@ -10,95 +11,84 @@ class Onboarding2Screen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 20),
+        child: Column(
+          children: [
+            const SizedBox(height: 30),
 
-              // TEXT
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: "Let\n",
-                        style: TextStyle(color: Colors.white, fontSize: 24),
+            /// Title Text
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(
+                      text: "Too Many ",
+                      style: TextStyle(color: Colors.white, fontSize: 26),
+                    ),
+                    const TextSpan(
+                      text: "Tasks",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                       ),
-                      TextSpan(
-                        text: "Store Sync\n",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      TextSpan(
-                        text: "Be your Assistant, ",
-                        style: TextStyle(color: Colors.white, fontSize: 22),
-                      ),
-                      TextSpan(
-                        text: "Solve it ",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      TextSpan(
-                        text: "for you",
-                        style: TextStyle(color: Colors.white, fontSize: 22),
-                      ),
-                    ],
-                  ),
-                  textAlign: TextAlign.center,
+                    ),
+                    const TextSpan(
+                      text: ", Too Little Time?",
+                      style: TextStyle(color: Colors.white, fontSize: 26),
+                    ),
+                  ],
                 ),
+                textAlign: TextAlign.center,
               ),
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
-              // BIG IMAGE (same style as onboarding1)
-              SizedBox(
-                height: screenHeight * 0.70,
+
+            Transform.translate(
+              offset: const Offset(0, -40),
+              child: SizedBox(
+                height: screenHeight * 0.60,
+                width: double.infinity,
                 child: Image.asset(
                   "assets/images/onboarding2.png",
                   fit: BoxFit.cover,
-                  width: double.infinity,
                 ),
               ),
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
-              // NEXT BUTTON (navigate to login for now)
-              SizedBox(
-                width: 160,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Navigate to LoginScreen once created
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Login screen not created yet"),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+            /// Next Button
+            Padding(
+              padding: const EdgeInsets.only(bottom: 25),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Onboarding3Screen(),
                     ),
-                  ),
-                  child: const Text(
-                    "Next",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
+                  );
+                },
+                child: const Text(
+                  "Next",
+                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
-
-              const SizedBox(height: 25),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
