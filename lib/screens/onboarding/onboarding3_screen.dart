@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../auth/login_screen.dart';
 
 class Onboarding3Screen extends StatelessWidget {
   const Onboarding3Screen({super.key});
@@ -75,20 +76,20 @@ class Onboarding3Screen extends StatelessWidget {
                 width: 160,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Navigate to LoginScreen once created
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Login screen not created yet"),
-                      ),
-                    );
-                  },
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    );
+
+                  },
                   child: const Text(
                     "Next",
                     style: TextStyle(fontSize: 18, color: Colors.white),
