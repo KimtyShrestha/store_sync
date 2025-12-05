@@ -15,7 +15,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Safe navigation AFTER the first frame is rendered
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 3), () {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -33,8 +33,8 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Image(
           image: AssetImage("assets/images/store_logo.png"),
-          width: 350,
-          height: 350,
+          width: 450,
+          height: 450,
           fit: BoxFit.contain,
         ),
       ),
