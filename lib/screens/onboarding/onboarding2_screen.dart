@@ -45,11 +45,11 @@ class Onboarding2Screen extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-
+            /// BIG Image moved upward
             Transform.translate(
-              offset: const Offset(0, -40),
+              offset: const Offset(0, -5),
               child: SizedBox(
-                height: screenHeight * 0.60,
+                height: screenHeight * 0.70,
                 width: double.infinity,
                 child: Image.asset(
                   "assets/images/onboarding2.png",
@@ -58,18 +58,15 @@ class Onboarding2Screen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 10),
+            const Spacer(),
 
             /// Next Button
-            Padding(
-              padding: const EdgeInsets.only(bottom: 25),
+            SizedBox(
+              width: 160,
+              height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 14,
-                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
@@ -88,6 +85,8 @@ class Onboarding2Screen extends StatelessWidget {
                 ),
               ),
             ),
+
+            const SizedBox(height: 25),
           ],
         ),
       ),
