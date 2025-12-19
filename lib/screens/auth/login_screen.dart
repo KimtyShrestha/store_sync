@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:store_sync/screens/dashboard/dashboard_screen.dart';
 import '../home/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -141,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const HomeScreen(),
+                        builder: (context) => const DashboardScreen(),
                       ),
                     );
                   },

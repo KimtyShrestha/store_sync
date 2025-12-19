@@ -8,32 +8,6 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // Bottom Navigation Bar
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        selectedItemColor: Colors.red,
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long),
-            label: "Records",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.workspaces_outline),
-            label: "Projects",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            label: "Setting",
-          ),
-        ],
-      ),
-
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -54,7 +28,6 @@ class HomeScreen extends StatelessWidget {
                         height: 28,
                       ),
                       const SizedBox(width: 6),
-
                     ],
                   ),
 
@@ -72,7 +45,9 @@ class HomeScreen extends StatelessWidget {
               const Text(
                 "Kimti Shrestha",
                 style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
               const SizedBox(height: 20),
