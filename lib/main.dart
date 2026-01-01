@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:store_sync/screens/dashboard/dashboard_screen.dart';
-import 'package:store_sync/screens/home/home_screen.dart';
-import 'screens/splash/splash_screen.dart';
-import 'screens/onboarding/onboarding1_screen.dart';
-import 'screens/onboarding/onboarding2_screen.dart';
-import 'screens/onboarding/onboarding3_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'theme/app_theme.dart';
+import 'package:store_sync/features/dashboard/presentation/pages/dashboard_screen.dart';
+import 'package:store_sync/features/home/presentation/pages/home_screen.dart';
+import 'features/splash/presentation/pages/splash_screen.dart';
+import 'features/onboarding/presentation/pages/onboarding1_screen.dart';
+import 'features/onboarding/presentation/pages/onboarding2_screen.dart';
+import 'features/onboarding/presentation/pages/onboarding3_screen.dart';
+import 'features/auth/presentation/pages/login_screen.dart';
+import 'app/theme/app_theme.dart';
 
 void main() {
   runApp(const MyApp());
