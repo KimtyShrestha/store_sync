@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../onboarding/presentation/pages/onboarding1_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,7 +14,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    // Safe navigation AFTER the first frame is rendered
+    // Navigate to onboarding after 3 seconds
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(seconds: 3), () {
         Navigator.pushReplacement(
