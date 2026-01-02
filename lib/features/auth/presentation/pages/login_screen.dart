@@ -1,18 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:store_sync/features/dashboard/presentation/pages/dashboard_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-class LoginScreen extends StatefulWidget {
+import '../../../dashboard/presentation/pages/dashboard_screen.dart';
+import '../../presentation/providers/auth_provider.dart';
+import 'signup_page.dart';
+import '../../../auth/data/models/user_model.dart';
+
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
+
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(authProvider);
+
+    // Navigate when login succeeds
+    if (state.user != null) {
+      Future.microtask(() {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      });
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -23,15 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 60),
 
-              /// Logo
-              Image.asset(
-                "assets/images/store_logo3.png",
-                height: 85,
-              ),
+              Image.asset("assets/images/store_logo3.png", height: 85),
 
-              const SizedBox(height: 10),
-
-              const SizedBox(height: 35),
+              const SizedBox(height: 40),
 
               const Text(
                 "Login to your Store Sync ID",
@@ -44,24 +59,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 35),
 
-              /// USERNAME FIELD
-              SizedBox(
-                width: double.infinity,
-                child: TextFormField(
-                  decoration: InputDecoration(
-                    hintText: "Enter your Username",
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 16),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: Colors.black26, width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: Colors.black, width: 1.3),
-                    ),
+              /// EMAIL FIELD
+              TextFormField(
+                controller: emailController,
+                decoration: InputDecoration(
+                  hintText: "Enter your Email",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 ),
               ),
@@ -69,60 +73,50 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 22),
 
               /// PASSWORD FIELD
-              SizedBox(
-                width: double.infinity,
-                child: TextFormField(
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    hintText: "************",
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 16),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: Colors.black26, width: 1),
+              TextFormField(
+                controller: passwordController,
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  hintText: "Password",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: Colors.black, width: 1.3),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.grey[700],
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
                   ),
                 ),
               ),
 
               const SizedBox(height: 10),
 
-              /// FORGOT PASSWORD
               Align(
                 alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      "Forgot Password ?",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 14,
-                      ),
-                    ),
+                child: TextButton(
+                  onPressed: () {},
+                  child: const Text(
+                    "Forgot Password?",
+                    style: TextStyle(color: Colors.red),
                   ),
                 ),
               ),
+
+              const SizedBox(height: 10),
+
+              /// DISPLAY ERROR MESSAGE
+              if (state.error != null)
+                Text(
+                  state.error!,
+                  style: const TextStyle(color: Colors.red),
+                ),
 
               const SizedBox(height: 10),
 
@@ -131,29 +125,54 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.black, width: 1.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const DashboardScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    "Login",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  onPressed: state.isLoading
+                      ? null
+                      : () async {
+                          // Debug Hive storage
+                          final box =
+                              await Hive.openBox<UserModel>("userBox");
+                          print("Saved user in Hive:");
+                          print(box.get("currentUser"));
+
+                          ref.read(authProvider.notifier).login(
+                                emailController.text.trim(),
+                                passwordController.text.trim(),
+                              );
+                        },
+                  child: state.isLoading
+                      ? const CircularProgressIndicator(color: Colors.black)
+                      : const Text(
+                          "Login",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Don’t have an account?"),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SignupPage(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      "Sign Up",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 40),
