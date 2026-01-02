@@ -13,7 +13,7 @@ class AuthCheckPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(authProvider);
+    ref.watch(authProvider);
 
     return FutureBuilder<UserEntity?>(
       future: ref.read(authProvider.notifier).loadSavedUser(),
