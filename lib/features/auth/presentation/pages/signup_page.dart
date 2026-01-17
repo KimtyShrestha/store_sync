@@ -12,27 +12,25 @@ class SignupPage extends ConsumerStatefulWidget {
 }
 
 class _SignupPageState extends ConsumerState<SignupPage> {
-  final nameController = TextEditingController();
+  final firstNameController = TextEditingController();
+  final lastNameController = TextEditingController();
+  final usernameController = TextEditingController();
   final emailController = TextEditingController();
-  final phoneController = TextEditingController();
   final passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authProvider);
 
-    /// Listen for SUCCESSFUL SIGNUP
     ref.listen(authProvider, (previous, next) {
       if (next.user != null && previous?.user == null) {
-        // show successful message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("User Created Successfully!"),
+            content: Text("User Created Successfully"),
             backgroundColor: Colors.green,
           ),
         );
 
-        // Navigate back to login
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -47,8 +45,20 @@ class _SignupPageState extends ConsumerState<SignupPage> {
         child: Column(
           children: [
             TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: "Full Name"),
+              controller: firstNameController,
+              decoration: const InputDecoration(labelText: "First Name"),
+            ),
+            const SizedBox(height: 10),
+
+            TextField(
+              controller: lastNameController,
+              decoration: const InputDecoration(labelText: "Last Name"),
+            ),
+            const SizedBox(height: 10),
+
+            TextField(
+              controller: usernameController,
+              decoration: const InputDecoration(labelText: "Username"),
             ),
             const SizedBox(height: 10),
 
@@ -59,14 +69,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             const SizedBox(height: 10),
 
             TextField(
-              controller: phoneController,
-              decoration: const InputDecoration(labelText: "Phone Number"),
-            ),
-            const SizedBox(height: 10),
-
-            TextField(
               controller: passwordController,
               decoration: const InputDecoration(labelText: "Password"),
+              obscureText: true,
             ),
 
             const SizedBox(height: 20),
@@ -81,9 +86,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   ? null
                   : () {
                       ref.read(authProvider.notifier).signup(
-                            nameController.text.trim(),
+                            firstNameController.text.trim(),
+                            lastNameController.text.trim(),
+                            usernameController.text.trim(),
                             emailController.text.trim(),
-                            phoneController.text.trim(),
                             passwordController.text.trim(),
                           );
                     },

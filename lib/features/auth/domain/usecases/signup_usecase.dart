@@ -6,13 +6,28 @@ class SignupUseCase {
 
   SignupUseCase(this.repository);
 
-  Future<UserEntity?> call(String fullName, String email, String phone, String password) async {
+  Future<UserEntity?> call(
+    String firstName,
+    String lastName,
+    String username,
+    String email,
+    String password,
+  ) async {
     
-    // Validate fields
-    if (fullName.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
-      return null;
+    if (firstName.isEmpty ||
+        lastName.isEmpty ||
+        username.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty) {
+      throw Exception("All fields are required");
     }
 
-    return await repository.signup(fullName, email, phone, password);
+    return await repository.signup(
+      firstName,
+      lastName,
+      username,
+      email,
+      password,
+    );
   }
 }

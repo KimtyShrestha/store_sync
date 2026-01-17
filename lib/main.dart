@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:store_sync/features/auth/presentation/pages/auth_check_page.dart';
+
+
 
 import 'app/theme/app_theme.dart';
 
@@ -14,15 +14,12 @@ import 'features/auth/presentation/pages/login_screen.dart';
 import 'features/home/presentation/pages/home_screen.dart';
 import 'features/dashboard/presentation/pages/dashboard_screen.dart';
 
-// Hive Model
-import 'features/auth/data/models/user_model.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
-  await Hive.initFlutter();
-  Hive.registerAdapter(UserModelAdapter());
+
 
   // Riverpod must wrap the App
   runApp(
@@ -53,7 +50,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
         '/dashboard': (context) => const DashboardScreen(),
-        '/auth-check': (context) => const AuthCheckPage(),
+       
 
 
       },

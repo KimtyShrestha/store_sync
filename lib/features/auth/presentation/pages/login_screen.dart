@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+
 
 import '../../../dashboard/presentation/pages/dashboard_screen.dart';
 import '../../presentation/providers/auth_provider.dart';
 import 'signup_page.dart';
-import '../../../auth/data/models/user_model.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -128,11 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onPressed: state.isLoading
                       ? null
                       : () async {
-                          // Debug Hive storage
-                          final box =
-                              await Hive.openBox<UserModel>("userBox");
-                          print("Saved user in Hive:");
-                          print(box.get("currentUser"));
+                      
 
                           ref.read(authProvider.notifier).login(
                                 emailController.text.trim(),

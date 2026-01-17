@@ -18,6 +18,9 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
 
+  # HTTP for API communication
+  http: ^1.2.0
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
@@ -31,7 +34,6 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter:
-
   uses-material-design: true
 
   assets:

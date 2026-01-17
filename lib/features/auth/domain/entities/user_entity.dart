@@ -1,15 +1,19 @@
 class UserEntity {
-  final String? userId;
-  final String fullName;
+  final String? id;
+  final String firstName;
+  final String lastName;
+  final String username;
   final String email;
-  final String phoneNumber;
-  final String password;
+  final String role;
+  final String? token; // only available after login
 
   const UserEntity({
-    this.userId,
-    required this.fullName,
+    this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.username,
     required this.email,
-    required this.phoneNumber,
-    required this.password,
+    required this.role,
+    this.token,
   });
 }

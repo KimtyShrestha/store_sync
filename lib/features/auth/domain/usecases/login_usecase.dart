@@ -7,7 +7,11 @@ class LoginUseCase {
   LoginUseCase(this.repository);
 
   Future<UserEntity?> call(String email, String password) async {
-    if (email.isEmpty || password.isEmpty) return null;
+
+    // Basic validation
+    if (email.isEmpty || password.isEmpty) {
+      throw Exception("Email and password are required");
+    }
 
     return await repository.login(email, password);
   }

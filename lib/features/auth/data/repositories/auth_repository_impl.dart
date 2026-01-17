@@ -1,55 +1,89 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
-import '../datasources/local/auth_local_datasource.dart';
-import '../models/user_model.dart';
+
+// Android emulator localhost URL
+const String baseUrl = "http://10.0.2.2:5050/api/auth";
 
 class AuthRepositoryImpl implements AuthRepository {
-  final AuthLocalDataSource localDataSource;
-
-  AuthRepositoryImpl(this.localDataSource);
+  AuthRepositoryImpl();
 
   @override
-Future<UserEntity?> signup(
-    String fullName,
+  Future<UserEntity?> signup(
+    String firstName,
+    String lastName,
+    String username,
     String email,
-    String phone,
-    String password) async {
+    String password,
+  ) async {
+    final url = Uri.parse("$baseUrl/register");
 
-  final existing = await localDataSource.getUser();
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "firstName": firstName,
+        "lastName": lastName,
+        "username": username,
+        "email": email,
+        "password": password,
+      }),
+    );
 
-  if (existing != null && existing.email == email) {
-    throw Exception("User already exists");
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode != 201) {
+      throw Exception(body["message"] ?? "Signup failed");
+    }
+
+    final user = body["data"];
+
+    return UserEntity(
+      id: user["_id"],
+      firstName: user["firstName"],
+      lastName: user["lastName"],
+      username: user["username"],
+      email: user["email"],
+      role: user["role"],
+    );
   }
-
-  final user = UserModel(
-    userId: DateTime.now().millisecondsSinceEpoch.toString(),
-    fullName: fullName,
-    email: email,
-    phoneNumber: phone,
-    password: password,
-  );
-
-  await localDataSource.saveUser(user);
-
-  return user.toEntity();
-}
 
   @override
   Future<UserEntity?> login(String email, String password) async {
-    final saved = await localDataSource.getUser();
+    final url = Uri.parse("$baseUrl/login");
 
-    if (saved == null) return null;
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "email": email,
+        "password": password,
+      }),
+    );
 
-    if (saved.email == email && saved.password == password) {
-      return saved.toEntity();
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(body["message"] ?? "Invalid credentials");
     }
 
-    return null;
+    final user = body["data"];
+
+    return UserEntity(
+      id: user["_id"],
+      firstName: user["firstName"],
+      lastName: user["lastName"],
+      username: user["username"],
+      email: user["email"],
+      role: user["role"],
+      token: body["token"],
+    );
   }
 
- @override
-Future<void> logout() async {
-  // DO NOT delete stored user
-}
-
+  @override
+  Future<void> logout() async {
+    // No backend logout API needed
+  }
 }
