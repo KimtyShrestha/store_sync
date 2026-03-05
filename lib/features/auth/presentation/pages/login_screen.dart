@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-
 import '../../../dashboard/presentation/pages/dashboard_screen.dart';
 import '../../presentation/providers/auth_provider.dart';
-import 'signup_page.dart';
-
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -21,18 +18,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final passwordController = TextEditingController();
 
   @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final state = ref.watch(authProvider);
 
-    // Navigate when login succeeds
-    if (state.user != null) {
-      Future.microtask(() {
+    // Listen for login success
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.user != null && previous?.user == null) {
+        if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          MaterialPageRoute(
+            builder: (_) => const DashboardScreen(),
+          ),
         );
-      });
-    }
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -59,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               const SizedBox(height: 35),
 
-              /// EMAIL FIELD
+              // EMAIL FIELD
               TextFormField(
                 controller: emailController,
                 decoration: InputDecoration(
@@ -72,7 +80,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               const SizedBox(height: 22),
 
-              /// PASSWORD FIELD
+              // PASSWORD FIELD
               TextFormField(
                 controller: passwordController,
                 obscureText: _obscurePassword,
@@ -98,45 +106,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               const SizedBox(height: 10),
 
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    "Forgot Password?",
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              /// DISPLAY ERROR MESSAGE
+              // ERROR MESSAGE
               if (state.error != null)
                 Text(
                   state.error!,
                   style: const TextStyle(color: Colors.red),
                 ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
 
-              /// LOGIN BUTTON
+              // LOGIN BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton(
                   onPressed: state.isLoading
                       ? null
-                      : () async {
-                      
-
+                      : () {
                           ref.read(authProvider.notifier).login(
                                 emailController.text.trim(),
                                 passwordController.text.trim(),
                               );
                         },
                   child: state.isLoading
-                      ? const CircularProgressIndicator(color: Colors.black)
+                      ? const CircularProgressIndicator(
+                          color: Colors.black,
+                        )
                       : const Text(
                           "Login",
                           style: TextStyle(
@@ -146,29 +141,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                 ),
-              ),
-
-              const SizedBox(height: 20),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Don’t have an account?"),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SignupPage(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      "Sign Up",
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
               ),
 
               const SizedBox(height: 40),

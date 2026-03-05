@@ -1,43 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../onboarding/presentation/pages/onboarding1_screen.dart';
+import '../../../../core/storage/token_storage.dart';
+import '../../../dashboard/presentation/pages/dashboard_screen.dart';
+import '../../../auth/presentation/pages/login_screen.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+
   @override
   void initState() {
     super.initState();
+    _checkLoginStatus();
+  }
 
-    // Navigate to onboarding after 3 seconds
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 3), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const Onboarding1Screen(),
-          ),
-        );
-      });
-    });
+  Future<void> _checkLoginStatus() async {
+    await Future.delayed(const Duration(seconds: 2));
+
+    final tokenStorage = TokenStorage();
+    final token = await tokenStorage.getToken();
+
+    if (!mounted) return;
+
+    if (token != null && token.isNotEmpty) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const DashboardScreen(),
+        ),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Colors.black,
       body: Center(
-        child: Image(
-          image: AssetImage("assets/images/store_logo.png"),
-          width: 450,
-          height: 450,
-          fit: BoxFit.contain,
-        ),
+        child: CircularProgressIndicator(),
       ),
     );
   }
