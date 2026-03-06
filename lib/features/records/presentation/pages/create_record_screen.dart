@@ -45,7 +45,6 @@ class _CreateRecordScreenState
             backgroundColor: Colors.green,
           ),
         );
-
         ref.read(recordsProvider.notifier).resetSuccess();
       }
 
@@ -59,13 +58,17 @@ class _CreateRecordScreenState
       }
 
       if (next.record != null && previous?.record != next.record) {
-        salesItems.clear();
-        expenseItems.clear();
-        purchaseItems.clear();
+        salesItems
+          ..clear()
+          ..addAll(next.record!.salesItems);
 
-        salesItems.addAll(next.record!.salesItems);
-        expenseItems.addAll(next.record!.expenseItems);
-        purchaseItems.addAll(next.record!.purchaseItems);
+        expenseItems
+          ..clear()
+          ..addAll(next.record!.expenseItems);
+
+        purchaseItems
+          ..clear()
+          ..addAll(next.record!.purchaseItems);
 
         setState(() {});
       }
@@ -86,7 +89,6 @@ class _CreateRecordScreenState
 
           const SizedBox(height: 10),
 
-          /// UNSAVED CHANGES INDICATOR
           if (state.hasUnsavedChanges)
             Container(
               width: double.infinity,
@@ -162,15 +164,14 @@ class _CreateRecordScreenState
   // ================= SUMMARY =================
 
   Widget _buildSummarySection() {
+    final totalSales =
+        salesItems.fold<double>(0, (sum, item) => sum + item.subtotal);
 
-    final totalSales = salesItems.fold<double>(
-        0, (sum, item) => sum + item.subtotal);
+    final totalExpense =
+        expenseItems.fold<double>(0, (sum, item) => sum + item.subtotal);
 
-    final totalExpense = expenseItems.fold<double>(
-        0, (sum, item) => sum + item.subtotal);
-
-    final totalPurchases = purchaseItems.fold<double>(
-        0, (sum, item) => sum + item.subtotal);
+    final totalPurchases =
+        purchaseItems.fold<double>(0, (sum, item) => sum + item.subtotal);
 
     final profit = totalSales - totalExpense;
 
@@ -221,79 +222,115 @@ class _CreateRecordScreenState
     );
   }
 
-  // ================= SALES =================
+  // ================= SALES TAB =================
 
   Widget _buildSalesTab() {
     return ListView.builder(
       itemCount: salesItems.length,
       itemBuilder: (context, index) {
         final item = salesItems[index];
+
         return ListTile(
           title: Text(item.itemName),
           subtitle: Text(
               "Qty: ${item.quantity} | Price: ${item.price} | Subtotal: ${item.subtotal}"),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              setState(() => salesItems.removeAt(index));
-              ref.read(recordsProvider.notifier)
-                  .markUnsavedChanges();
-            },
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.edit,
+                    color: Theme.of(context).primaryColor),
+                onPressed: () =>
+                    _showSalesDialog(existingItem: item, index: index),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () {
+                  setState(() => salesItems.removeAt(index));
+                  ref.read(recordsProvider.notifier)
+                      .markUnsavedChanges();
+                },
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  // ================= EXPENSE =================
+  // ================= EXPENSE TAB =================
 
   Widget _buildExpensesTab() {
     return ListView.builder(
       itemCount: expenseItems.length,
       itemBuilder: (context, index) {
         final item = expenseItems[index];
+
         return ListTile(
           title: Text(item.category),
           subtitle: Text(
               "Qty: ${item.quantity} | Price: ${item.price} | Subtotal: ${item.subtotal}"),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              setState(() => expenseItems.removeAt(index));
-              ref.read(recordsProvider.notifier)
-                  .markUnsavedChanges();
-            },
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.edit,
+                    color: Theme.of(context).primaryColor),
+                onPressed: () =>
+                    _showExpenseDialog(existingItem: item, index: index),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () {
+                  setState(() => expenseItems.removeAt(index));
+                  ref.read(recordsProvider.notifier)
+                      .markUnsavedChanges();
+                },
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  // ================= PURCHASE =================
+  // ================= PURCHASE TAB =================
 
   Widget _buildPurchasesTab() {
     return ListView.builder(
       itemCount: purchaseItems.length,
       itemBuilder: (context, index) {
         final item = purchaseItems[index];
+
         return ListTile(
           title: Text(item.category),
           subtitle: Text(
               "Qty: ${item.quantity} | Price: ${item.price} | Subtotal: ${item.subtotal}"),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              setState(() => purchaseItems.removeAt(index));
-              ref.read(recordsProvider.notifier)
-                  .markUnsavedChanges();
-            },
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.edit,
+                    color: Theme.of(context).primaryColor),
+                onPressed: () =>
+                    _showPurchaseDialog(existingItem: item, index: index),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () {
+                  setState(() => purchaseItems.removeAt(index));
+                  ref.read(recordsProvider.notifier)
+                      .markUnsavedChanges();
+                },
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  // ================= ADD ITEM SWITCH =================
+  // ================= ADD SWITCH =================
 
   void _addItemBasedOnTab() {
     switch (_tabController.index) {
@@ -309,15 +346,21 @@ class _CreateRecordScreenState
     }
   }
 
-  void _showSalesDialog() {
-    final nameController = TextEditingController();
-    final qtyController = TextEditingController();
-    final priceController = TextEditingController();
+  // ================= DIALOGS =================
+
+  void _showSalesDialog({SalesItem? existingItem, int? index}) {
+    final nameController =
+        TextEditingController(text: existingItem?.itemName ?? "");
+    final qtyController =
+        TextEditingController(text: existingItem?.quantity.toString() ?? "");
+    final priceController =
+        TextEditingController(text: existingItem?.price.toString() ?? "");
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Add Sales Item"),
+        title:
+            Text(existingItem == null ? "Add Sales Item" : "Edit Sales Item"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -329,14 +372,18 @@ class _CreateRecordScreenState
         actions: [
           TextButton(
             onPressed: () {
+              final updatedItem = SalesItem(
+                itemName: nameController.text,
+                quantity: int.parse(qtyController.text),
+                price: double.parse(priceController.text),
+              );
+
               setState(() {
-                salesItems.add(
-                  SalesItem(
-                    itemName: nameController.text,
-                    quantity: int.parse(qtyController.text),
-                    price: double.parse(priceController.text),
-                  ),
-                );
+                if (existingItem == null) {
+                  salesItems.add(updatedItem);
+                } else {
+                  salesItems[index!] = updatedItem;
+                }
               });
 
               ref.read(recordsProvider.notifier)
@@ -344,22 +391,26 @@ class _CreateRecordScreenState
 
               Navigator.pop(context);
             },
-            child: const Text("Add"),
+            child: Text(existingItem == null ? "Add" : "Update"),
           )
         ],
       ),
     );
   }
 
-  void _showExpenseDialog() {
-    final categoryController = TextEditingController();
-    final qtyController = TextEditingController();
-    final priceController = TextEditingController();
+  void _showExpenseDialog({ExpenseItem? existingItem, int? index}) {
+    final categoryController =
+        TextEditingController(text: existingItem?.category ?? "");
+    final qtyController =
+        TextEditingController(text: existingItem?.quantity.toString() ?? "");
+    final priceController =
+        TextEditingController(text: existingItem?.price.toString() ?? "");
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Add Expense Item"),
+        title:
+            Text(existingItem == null ? "Add Expense Item" : "Edit Expense Item"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -371,14 +422,18 @@ class _CreateRecordScreenState
         actions: [
           TextButton(
             onPressed: () {
+              final updatedItem = ExpenseItem(
+                category: categoryController.text,
+                quantity: int.parse(qtyController.text),
+                price: double.parse(priceController.text),
+              );
+
               setState(() {
-                expenseItems.add(
-                  ExpenseItem(
-                    category: categoryController.text,
-                    quantity: int.parse(qtyController.text),
-                    price: double.parse(priceController.text),
-                  ),
-                );
+                if (existingItem == null) {
+                  expenseItems.add(updatedItem);
+                } else {
+                  expenseItems[index!] = updatedItem;
+                }
               });
 
               ref.read(recordsProvider.notifier)
@@ -386,22 +441,27 @@ class _CreateRecordScreenState
 
               Navigator.pop(context);
             },
-            child: const Text("Add"),
+            child: Text(existingItem == null ? "Add" : "Update"),
           )
         ],
       ),
     );
   }
 
-  void _showPurchaseDialog() {
-    final categoryController = TextEditingController();
-    final qtyController = TextEditingController();
-    final priceController = TextEditingController();
+  void _showPurchaseDialog({PurchaseItem? existingItem, int? index}) {
+    final categoryController =
+        TextEditingController(text: existingItem?.category ?? "");
+    final qtyController =
+        TextEditingController(text: existingItem?.quantity.toString() ?? "");
+    final priceController =
+        TextEditingController(text: existingItem?.price.toString() ?? "");
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Add Purchase Item"),
+        title: Text(existingItem == null
+            ? "Add Purchase Item"
+            : "Edit Purchase Item"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -413,14 +473,18 @@ class _CreateRecordScreenState
         actions: [
           TextButton(
             onPressed: () {
+              final updatedItem = PurchaseItem(
+                category: categoryController.text,
+                quantity: int.parse(qtyController.text),
+                price: double.parse(priceController.text),
+              );
+
               setState(() {
-                purchaseItems.add(
-                  PurchaseItem(
-                    category: categoryController.text,
-                    quantity: int.parse(qtyController.text),
-                    price: double.parse(priceController.text),
-                  ),
-                );
+                if (existingItem == null) {
+                  purchaseItems.add(updatedItem);
+                } else {
+                  purchaseItems[index!] = updatedItem;
+                }
               });
 
               ref.read(recordsProvider.notifier)
@@ -428,13 +492,10 @@ class _CreateRecordScreenState
 
               Navigator.pop(context);
             },
-            child: const Text("Add"),
+            child: Text(existingItem == null ? "Add" : "Update"),
           )
         ],
       ),
     );
   }
 }
-
-
-
