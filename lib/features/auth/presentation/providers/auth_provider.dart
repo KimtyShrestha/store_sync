@@ -38,8 +38,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     this.logoutUseCase,
   ) : super(AuthState());
 
-
-
   // =======================
   // LOGIN
   // =======================
@@ -57,6 +55,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } catch (e) {
       state = state.copyWith(error: e.toString(), isLoading: false);
+    }
+  }
+
+  // =======================
+  // CHANGE PASSWORD
+  // =======================
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final repository = AuthRepositoryImpl();
+
+      await repository.changePassword(
+        currentPassword,
+        newPassword,
+      );
+
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(
+        error: e.toString(),
+        isLoading: false,
+      );
+      rethrow;
     }
   }
 

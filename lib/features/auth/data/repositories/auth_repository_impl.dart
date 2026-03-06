@@ -35,7 +35,7 @@ class AuthRepositoryImpl implements AuthRepository {
         "email": email,
         "password": password,
         "confirmPassword": password,
-        "role": "manager", // Mobile app only for managers
+        "role": "manager",
       }),
     );
 
@@ -63,55 +63,85 @@ class AuthRepositoryImpl implements AuthRepository {
   // LOGIN
   // =======================
   @override
-Future<UserEntity?> login(String email, String password) async {
-  final url = Uri.parse("$baseUrl/login");
+  Future<UserEntity?> login(String email, String password) async {
+    final url = Uri.parse("$baseUrl/login");
 
-  final response = await http.post(
-    url,
-    headers: {"Content-Type": "application/json"},
-    body: jsonEncode({
-      "email": email,
-      "password": password,
-    }),
-  );
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "email": email,
+        "password": password,
+      }),
+    );
 
-  final body = jsonDecode(response.body);
+    final body = jsonDecode(response.body);
 
-  if (response.statusCode != 200) {
-    throw Exception(body["message"] ?? "Invalid credentials");
+    if (response.statusCode != 200) {
+      throw Exception(body["message"] ?? "Invalid credentials");
+    }
+
+    final user = body["data"];
+    final token = body["token"];
+
+    await _tokenStorage.saveToken(token);
+
+    return UserEntity(
+      id: user["_id"],
+      email: user["email"],
+      role: user["role"],
+      status: user["status"],
+      firstName: user["firstName"],
+      lastName: user["lastName"],
+      ownerId: user["ownerId"],
+      profileImage: user["profileImage"],
+      token: token,
+    );
   }
 
-  final user = body["data"];
-  final token = body["token"];
+  // =======================
+  // CHANGE PASSWORD
+  // =======================
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
 
-  // Save token locally
-  await _tokenStorage.saveToken(token);
+    final token = await _tokenStorage.getToken();
 
-  return UserEntity(
-    id: user["_id"],
-    email: user["email"],
-    role: user["role"],
-    status: user["status"],
-    firstName: user["firstName"],
-    lastName: user["lastName"],
-    ownerId: user["ownerId"],
-    profileImage: user["profileImage"],
-    token: token,
-  );
-}
+    final url = Uri.parse("$baseUrl/change-password");
+
+    final response = await http.patch(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({
+        "currentPassword": currentPassword,
+        "newPassword": newPassword,
+      }),
+    );
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(body["message"] ?? "Password change failed");
+    }
+  }
 
   // =======================
   // LOGOUT
   // =======================
   @override
-Future<void> logout() async {
-  await _tokenStorage.clearToken();
+  Future<void> logout() async {
+    await _tokenStorage.clearToken();
 
-  final url = Uri.parse("$baseUrl/logout");
+    final url = Uri.parse("$baseUrl/logout");
 
-  await http.post(
-    url,
-    headers: {"Content-Type": "application/json"},
-  );
-}
+    await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+    );
+  }
 }
