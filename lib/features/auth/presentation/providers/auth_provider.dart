@@ -17,7 +17,7 @@ class AuthState {
   final UserEntity? user;
   final String? error;
 
-  AuthState({
+  const AuthState({
     this.isLoading = false,
     this.user,
     this.error,
@@ -49,7 +49,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     this.loginUseCase,
     this.logoutUseCase,
     this.repository,
-  ) : super(AuthState());
+  ) : super(const AuthState());
 
   // =======================
   // LOGIN
@@ -104,11 +104,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // =======================
   // UPDATE PROFILE IMAGE
   // =======================
-  Future<void> updateProfileImage(String imageUrl) async {
+  void updateProfileImage(String imagePath) {
     if (state.user == null) return;
 
-    final updatedUser =
-        state.user!.copyWith(profileImage: imageUrl);
+    final updatedUser = state.user!.copyWith(
+      profileImage: imagePath,
+    );
 
     state = state.copyWith(user: updatedUser);
   }
@@ -118,7 +119,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // =======================
   Future<void> logout() async {
     await logoutUseCase();
-    state = AuthState();
+    state = const AuthState();
   }
 }
 
@@ -131,7 +132,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 final tokenStorageProvider =
     Provider<TokenStorage>((ref) => TokenStorage());
 
-// Api Client
+// API Client
 final apiClientProvider =
     Provider<ApiClient>((ref) {
   final tokenStorage = ref.read(tokenStorageProvider);
@@ -147,7 +148,7 @@ final authRepositoryProvider =
   return AuthRepositoryImpl(apiClient, tokenStorage);
 });
 
-// UseCases
+// Use Cases
 final loginUseCaseProvider =
     Provider<LoginUseCase>((ref) {
   final repository = ref.read(authRepositoryProvider);
@@ -160,7 +161,7 @@ final logoutUseCaseProvider =
   return LogoutUseCase(repository);
 });
 
-// Main Auth Provider
+// MAIN AUTH PROVIDER
 final authProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final loginUseCase = ref.read(loginUseCaseProvider);
