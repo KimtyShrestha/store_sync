@@ -41,6 +41,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  sensors_plus: ^4.0.2
+
   flutter_lints: ^5.0.0
 
   # Hive generator
