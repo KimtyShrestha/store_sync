@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import '../../../inventory/presentation/pages/inventory_screen.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../home/presentation/pages/home_screen.dart';
 import '../../../records/presentation/pages/create_record_screen.dart';
@@ -19,10 +19,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
-    HomeScreen(),
-    CreateRecordScreen(),
-    SettingsScreen(),
-  ];
+  HomeScreen(),
+  CreateRecordScreen(),
+  InventoryScreen(),
+  SettingsScreen(),
+];
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +71,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       ),
 
-      body: _screens[_selectedIndex],
+      body: _screens.elementAt(_selectedIndex),
 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -91,6 +92,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             icon: Icon(Icons.receipt_long),
             label: "Records",
           ),
+
+          BottomNavigationBarItem(
+          icon: Icon(Icons.inventory),
+          label: "Inventory",
+          ), 
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: "Settings",
