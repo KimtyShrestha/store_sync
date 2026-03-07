@@ -4,7 +4,10 @@ import 'package:http/http.dart' as http;
 
 class ImageUploadService {
   // Backend Base URL
-  static const String baseUrl = "http://10.0.2.2:5050/api/user";
+  // static const String baseUrl = "http://10.0.2.2:5050/api/user";
+
+    static const String baseUrl = "http://10.166.172.155:5050/api";
+  
 
   Future<String?> uploadProfileImage(File imageFile, String userId) async {
     final uri = Uri.parse("$baseUrl/upload-profile/$userId");
