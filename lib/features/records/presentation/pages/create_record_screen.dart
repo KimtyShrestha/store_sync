@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+
+import 'dart:io';
+import 'dart:async';
 
 import '../widgets/expense_tab_list.dart';
-import '../../domain/entities/daily_record_entity.dart';
-import '../providers/records_provider.dart';
-import '../widgets/record_summary_card.dart';
 import '../widgets/sales_tab_list.dart';
 import '../widgets/purchase_tab_list.dart';
+import '../widgets/record_summary_card.dart';
 
 import '../../dialogs/sales_item_dialog.dart';
 import '../../dialogs/expense_item_dialog.dart';
 import '../../dialogs/purchase_item_dialog.dart';
 
-// ─── Theme constants matching your app ───────────────────────────────────────
-const _kRed        = Color(0xFFD32F2F);
-const _kWhite      = Color(0xFFFFFFFF);
+import '../../domain/entities/daily_record_entity.dart';
+import '../providers/records_provider.dart';
+
+/// Theme constants
+const _kRed = Color(0xFFD32F2F);
+const _kWhite = Color(0xFFFFFFFF);
 const _kBackground = Color(0xFFF5F5F5);
-const _kTextDark   = Color(0xFF1A1A1A);
-const _kTextGrey   = Color(0xFF757575);
-// ─────────────────────────────────────────────────────────────────────────────
+const _kTextDark = Color(0xFF1A1A1A);
+const _kTextGrey = Color(0xFF757575);
 
 class CreateRecordScreen extends ConsumerStatefulWidget {
   const CreateRecordScreen({super.key});
@@ -28,15 +33,29 @@ class CreateRecordScreen extends ConsumerStatefulWidget {
       _CreateRecordScreenState();
 }
 
-class _CreateRecordScreenState
-    extends ConsumerState<CreateRecordScreen>
+class _CreateRecordScreenState extends ConsumerState<CreateRecordScreen>
     with SingleTickerProviderStateMixin {
 
+  /// Image
+  File? selectedImage;
+  final ImagePicker picker = ImagePicker();
+
+  /// Accelerometer
+  StreamSubscription? accelerometerSubscription;
+  double lastX = 0;
+  double lastY = 0;
+  double lastZ = 0;
+  DateTime lastShakeTime = DateTime.now();
+
+  /// Tabs
   late TabController _tabController;
+
+  /// Riverpod listener
   late final ProviderSubscription<RecordsState> _recordsListener;
 
-  final List<SalesItem>    salesItems    = [];
-  final List<ExpenseItem>  expenseItems  = [];
+  /// Lists
+  final List<SalesItem> salesItems = [];
+  final List<ExpenseItem> expenseItems = [];
   final List<PurchaseItem> purchaseItems = [];
 
   @override
@@ -49,6 +68,7 @@ class _CreateRecordScreenState
       ref.read(recordsProvider.notifier).loadTodayRecord();
     });
 
+    /// Provider listener
     _recordsListener = ref.listenManual<RecordsState>(
       recordsProvider,
       (previous, next) {
@@ -69,6 +89,7 @@ class _CreateRecordScreenState
           });
         }
 
+        /// Success message
         if (next.isSuccess && previous?.isSuccess != true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -79,42 +100,131 @@ class _CreateRecordScreenState
                   Text("Daily record saved successfully"),
                 ],
               ),
-              backgroundColor: Colors.green.shade600,
+              backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              margin: const EdgeInsets.all(16),
             ),
           );
+
           ref.read(recordsProvider.notifier).resetSuccess();
         }
 
+        /// Error message
         if (next.error != null && next.error != previous?.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: _kWhite, size: 18),
+                  const Icon(Icons.error_outline, color: _kWhite),
                   const SizedBox(width: 8),
                   Expanded(child: Text(next.error!)),
                 ],
               ),
               backgroundColor: _kRed,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              margin: const EdgeInsets.all(16),
             ),
           );
         }
+      },
+    );
+
+    /// Shake detection
+    accelerometerSubscription = accelerometerEvents.listen((event) {
+
+      double dx = (event.x - lastX).abs();
+      double dy = (event.y - lastY).abs();
+      double dz = (event.z - lastZ).abs();
+
+      double movement = dx + dy + dz;
+
+      if (movement > 25) {
+
+        final now = DateTime.now();
+
+        if (now.difference(lastShakeTime).inSeconds > 2) {
+
+          lastShakeTime = now;
+
+          debugPrint("PHONE SHAKEN");
+
+          _showDeleteConfirmation();
+        }
+      }
+
+      lastX = event.x;
+      lastY = event.y;
+      lastZ = event.z;
+    });
+  }
+
+  /// Take Photo
+  Future<void> takePhoto() async {
+
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.camera,
+    );
+
+    if (image != null) {
+      setState(() {
+        selectedImage = File(image.path);
+      });
+    }
+  }
+
+  /// Delete Confirmation
+  void _showDeleteConfirmation() {
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+
+        return AlertDialog(
+          title: const Text("Clear all records?"),
+          content: const Text(
+            "You shook the phone. Do you want to delete all items in today's record?",
+          ),
+          actions: [
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+
+                setState(() {
+                  salesItems.clear();
+                  expenseItems.clear();
+                  purchaseItems.clear();
+                });
+
+                ref.read(recordsProvider.notifier).markUnsavedChanges();
+
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("All records cleared"),
+                  ),
+                );
+              },
+              child: const Text("Delete"),
+            ),
+          ],
+        );
       },
     );
   }
 
   @override
   void dispose() {
+    accelerometerSubscription?.cancel();
     _recordsListener.close();
     _tabController.dispose();
     super.dispose();
@@ -128,23 +238,23 @@ class _CreateRecordScreenState
     return Scaffold(
       backgroundColor: _kBackground,
 
-      // ── Red header matching your dashboard ──────────────────────────────
+      /// AppBar
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(70),
         child: Container(
           decoration: const BoxDecoration(
             color: _kRed,
             borderRadius: BorderRadius.only(
-              bottomLeft:  Radius.circular(20),
+              bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
             ),
           ),
-          child: SafeArea(
+          child: const SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -155,7 +265,6 @@ class _CreateRecordScreenState
                             color: _kWhite,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 0.3,
                           ),
                         ),
                         SizedBox(height: 2),
@@ -169,33 +278,6 @@ class _CreateRecordScreenState
                       ],
                     ),
                   ),
-
-                  // Unsaved badge in header
-                  if (state.hasUnsavedChanges)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white38),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.circle, color: Colors.orangeAccent,
-                              size: 7),
-                          SizedBox(width: 5),
-                          Text(
-                            "Unsaved",
-                            style: TextStyle(
-                              color: _kWhite,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -203,24 +285,24 @@ class _CreateRecordScreenState
         ),
       ),
 
+      /// Body
       body: Column(
         children: [
 
           const SizedBox(height: 14),
 
-          // ── Summary card ──────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: RecordSummaryCard(
-              salesItems:    salesItems,
-              expenseItems:  expenseItems,
+              salesItems: salesItems,
+              expenseItems: expenseItems,
               purchaseItems: purchaseItems,
             ),
           ),
 
           const SizedBox(height: 14),
 
-          // ── Tab bar ───────────────────────────────────────────────────
+          /// Tabs
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Container(
@@ -228,13 +310,6 @@ class _CreateRecordScreenState
               decoration: BoxDecoration(
                 color: _kWhite,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.006),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: TabBar(
                 controller: _tabController,
@@ -242,28 +317,8 @@ class _CreateRecordScreenState
                   color: _kRed,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                indicatorSize: TabBarIndicatorSize.tab,
                 labelColor: _kWhite,
                 unselectedLabelColor: _kTextGrey,
-                labelStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-                dividerColor: Colors.transparent,
-                overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                  (states) {
-                    if (states.contains(WidgetState.hovered) ||
-                        states.contains(WidgetState.pressed)) {
-                      return const Color(0xFFEEEEEE);
-                    }
-                    return Colors.transparent;
-                  },
-                ),
-                padding: const EdgeInsets.all(4),
                 tabs: const [
                   Tab(text: "Sales"),
                   Tab(text: "Expenses"),
@@ -275,7 +330,6 @@ class _CreateRecordScreenState
 
           const SizedBox(height: 10),
 
-          // ── Tab content ───────────────────────────────────────────────
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -283,95 +337,95 @@ class _CreateRecordScreenState
 
                 SalesTabList(
                   salesItems: salesItems,
-                  onDelete: (index) {
-                    setState(() => salesItems.removeAt(index));
+                  onDelete: (i) {
+                    setState(() => salesItems.removeAt(i));
                     ref.read(recordsProvider.notifier).markUnsavedChanges();
                   },
-                  onEdit: (index, item) {
-                    _showSalesDialog(existingItem: item, index: index);
+                  onEdit: (i, item) {
+                    _showSalesDialog(existingItem: item, index: i);
                   },
                 ),
 
                 ExpenseTabList(
                   expenseItems: expenseItems,
-                  onDelete: (index) {
-                    setState(() => expenseItems.removeAt(index));
+                  onDelete: (i) {
+                    setState(() => expenseItems.removeAt(i));
                     ref.read(recordsProvider.notifier).markUnsavedChanges();
                   },
-                  onEdit: (index, item) {
-                    _showExpenseDialog(existingItem: item, index: index);
+                  onEdit: (i, item) {
+                    _showExpenseDialog(existingItem: item, index: i);
                   },
                 ),
 
                 PurchaseTabList(
                   purchaseItems: purchaseItems,
-                  onDelete: (index) {
-                    setState(() => purchaseItems.removeAt(index));
+                  onDelete: (i) {
+                    setState(() => purchaseItems.removeAt(i));
                     ref.read(recordsProvider.notifier).markUnsavedChanges();
                   },
-                  onEdit: (index, item) {
-                    _showPurchaseDialog(existingItem: item, index: index);
+                  onEdit: (i, item) {
+                    _showPurchaseDialog(existingItem: item, index: i);
                   },
                 ),
-
               ],
             ),
           ),
         ],
       ),
 
-      // ── FAB ─────────────────────────────────────────────────────────────
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addItemBasedOnTab,
-        backgroundColor: const Color(0xFFEEEEEE),
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.add, color: _kTextDark, size: 26),
+      /// FAB
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+
+          FloatingActionButton(
+            heroTag: "camera",
+            onPressed: takePhoto,
+            backgroundColor: const Color(0xFFEEEEEE),
+            child: const Icon(Icons.camera_alt, color: _kTextDark),
+          ),
+
+          const SizedBox(width: 10),
+
+          FloatingActionButton(
+            heroTag: "add",
+            onPressed: _addItemBasedOnTab,
+            backgroundColor: const Color(0xFFEEEEEE),
+            child: const Icon(Icons.add, color: _kTextDark),
+          ),
+        ],
       ),
 
-      // ── Submit button ────────────────────────────────────────────────────
+      /// Submit button
       bottomNavigationBar: Container(
-        color: _kBackground,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
         child: SizedBox(
           height: 50,
           child: ElevatedButton(
-            onPressed: state.isLoading
-                ? null
-                : () {
-                    final record = DailyRecordEntity(
-                      salesItems:    salesItems,
-                      expenseItems:  expenseItems,
-                      purchaseItems: purchaseItems,
-                    );
-                    ref.read(recordsProvider.notifier).submitRecord(record);
-                  },
+            onPressed: state.isLoading ? null : () {
+
+              final record = DailyRecordEntity(
+                salesItems: salesItems,
+                expenseItems: expenseItems,
+                purchaseItems: purchaseItems,
+              );
+
+              ref.read(recordsProvider.notifier).submitRecord(record);
+
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: _kRed,
-              disabledBackgroundColor: _kRed.withValues(alpha: 0.05),
-              foregroundColor: _kWhite,
-              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: state.isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width:  20,
-                    child:  CircularProgressIndicator(
-                      color: _kWhite,
-                      strokeWidth: 2.5,
-                    ),
-                  )
+                ? const CircularProgressIndicator(color: _kWhite)
                 : const Text(
                     "Submit Record",
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
           ),
@@ -380,24 +434,30 @@ class _CreateRecordScreenState
     );
   }
 
-  // ================= ADD SWITCH =================
-
+  /// Add item
   void _addItemBasedOnTab() {
     switch (_tabController.index) {
-      case 0: _showSalesDialog();    break;
-      case 1: _showExpenseDialog();  break;
-      case 2: _showPurchaseDialog(); break;
+      case 0:
+        _showSalesDialog();
+        break;
+      case 1:
+        _showExpenseDialog();
+        break;
+      case 2:
+        _showPurchaseDialog();
+        break;
     }
   }
 
-  // ================= SALES DIALOG =================
-
+  /// Sales dialog
   void _showSalesDialog({SalesItem? existingItem, int? index}) {
+
     showDialog(
       context: context,
       builder: (_) => SalesItemDialog(
         existingItem: existingItem,
         onSave: (item) {
+
           setState(() {
             if (existingItem == null) {
               salesItems.add(item);
@@ -405,20 +465,22 @@ class _CreateRecordScreenState
               salesItems[index!] = item;
             }
           });
+
           ref.read(recordsProvider.notifier).markUnsavedChanges();
         },
       ),
     );
   }
 
-  // ================= EXPENSE DIALOG =================
-
+  /// Expense dialog
   void _showExpenseDialog({ExpenseItem? existingItem, int? index}) {
+
     showDialog(
       context: context,
       builder: (_) => ExpenseItemDialog(
         existingItem: existingItem,
         onSave: (item) {
+
           setState(() {
             if (existingItem == null) {
               expenseItems.add(item);
@@ -426,20 +488,22 @@ class _CreateRecordScreenState
               expenseItems[index!] = item;
             }
           });
+
           ref.read(recordsProvider.notifier).markUnsavedChanges();
         },
       ),
     );
   }
 
-  // ================= PURCHASE DIALOG =================
-
+  /// Purchase dialog
   void _showPurchaseDialog({PurchaseItem? existingItem, int? index}) {
+
     showDialog(
       context: context,
       builder: (_) => PurchaseItemDialog(
         existingItem: existingItem,
         onSave: (item) {
+
           setState(() {
             if (existingItem == null) {
               purchaseItems.add(item);
@@ -447,6 +511,7 @@ class _CreateRecordScreenState
               purchaseItems[index!] = item;
             }
           });
+
           ref.read(recordsProvider.notifier).markUnsavedChanges();
         },
       ),
