@@ -6,7 +6,8 @@ import '../../../../core/storage/token_storage.dart';
 import '../../../../core/utils/network_checker.dart';
 import '../../domain/entities/branch_info_entity.dart';
 
-const String baseUrl = "http://10.0.2.2:5050/api";
+// const String baseUrl = "http://10.0.2.2:5050/api";
+const String baseUrl = "http://10.166.172.155:5050/api";
 
 class DashboardRepositoryImpl {
 
