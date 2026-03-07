@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../data/repositories/records_repository_impl.dart';
 import '../../domain/entities/daily_record_entity.dart';
 import '../../domain/usecases/create_or_update_today_record_usecase.dart';
 import '../../domain/usecases/get_today_record_usecase.dart';
 import '../../domain/usecases/get_all_records_usecase.dart';
+import 'package:store_sync/features/auth/presentation/providers/auth_provider.dart';
+import 'package:store_sync/features/records/domain/repositories/records_repository.dart';
 
 // =============================
 // STATE
@@ -157,10 +158,16 @@ class RecordsNotifier extends StateNotifier<RecordsState> {
 // =============================
 // PROVIDER
 // =============================
+
+final recordsRepositoryProvider =
+    Provider<RecordsRepository>((ref) {
+  final apiClient = ref.read(apiClientProvider);
+  return RecordsRepositoryImpl(apiClient);
+});
+
 final recordsProvider =
     StateNotifierProvider<RecordsNotifier, RecordsState>((ref) {
-
-  final repository = RecordsRepositoryImpl();
+  final repository = ref.read(recordsRepositoryProvider);
 
   return RecordsNotifier(
     CreateOrUpdateTodayRecordUseCase(repository),

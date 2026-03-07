@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../widgets/expense_tab_list.dart';
 import '../../domain/entities/daily_record_entity.dart';
 import '../providers/records_provider.dart';
+import '../widgets/record_summary_card.dart';
+import '../widgets/sales_tab_list.dart';
+import '../widgets/purchase_tab_list.dart';
+
+import '../../dialogs/sales_item_dialog.dart';
+import '../../dialogs/expense_item_dialog.dart';
+import '../../dialogs/purchase_item_dialog.dart';
 
 class CreateRecordScreen extends ConsumerStatefulWidget {
   const CreateRecordScreen({super.key});
@@ -17,6 +25,7 @@ class _CreateRecordScreenState
     with SingleTickerProviderStateMixin {
 
   late TabController _tabController;
+  late final ProviderSubscription<RecordsState> _recordsListener;
 
   final List<SalesItem> salesItems = [];
   final List<ExpenseItem> expenseItems = [];
@@ -25,58 +34,73 @@ class _CreateRecordScreenState
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(length: 3, vsync: this);
 
     Future.microtask(() {
       ref.read(recordsProvider.notifier).loadTodayRecord();
     });
+
+    _recordsListener = ref.listenManual<RecordsState>(
+      recordsProvider,
+      (previous, next) {
+
+        // Populate UI lists when record loads
+        if (next.record != null && previous?.record != next.record) {
+          setState(() {
+            salesItems
+              ..clear()
+              ..addAll(next.record!.salesItems);
+
+            expenseItems
+              ..clear()
+              ..addAll(next.record!.expenseItems);
+
+            purchaseItems
+              ..clear()
+              ..addAll(next.record!.purchaseItems);
+          });
+        }
+
+        if (next.isSuccess && previous?.isSuccess != true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Daily record saved successfully"),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          ref.read(recordsProvider.notifier).resetSuccess();
+        }
+
+        if (next.error != null && next.error != previous?.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next.error!),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _recordsListener.close();
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+
     final state = ref.watch(recordsProvider);
-
-    ref.listen<RecordsState>(recordsProvider, (previous, next) {
-
-      if (next.isSuccess && previous?.isSuccess != true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Daily record saved successfully"),
-            backgroundColor: Colors.green,
-          ),
-        );
-        ref.read(recordsProvider.notifier).resetSuccess();
-      }
-
-      if (next.error != null && next.error != previous?.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error!),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-
-      if (next.record != null && previous?.record != next.record) {
-        salesItems
-          ..clear()
-          ..addAll(next.record!.salesItems);
-
-        expenseItems
-          ..clear()
-          ..addAll(next.record!.expenseItems);
-
-        purchaseItems
-          ..clear()
-          ..addAll(next.record!.purchaseItems);
-
-        setState(() {});
-      }
-    });
 
     return Scaffold(
       body: Column(
         children: [
+
           const SizedBox(height: 10),
 
           const Text(
@@ -106,7 +130,11 @@ class _CreateRecordScreenState
 
           const SizedBox(height: 10),
 
-          _buildSummarySection(),
+          RecordSummaryCard(
+            salesItems: salesItems,
+            expenseItems: expenseItems,
+            purchaseItems: purchaseItems,
+          ),
 
           const SizedBox(height: 10),
 
@@ -124,9 +152,42 @@ class _CreateRecordScreenState
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildSalesTab(),
-                _buildExpensesTab(),
-                _buildPurchasesTab(),
+
+                SalesTabList(
+                  salesItems: salesItems,
+                  onDelete: (index) {
+                    setState(() => salesItems.removeAt(index));
+                    ref.read(recordsProvider.notifier)
+                        .markUnsavedChanges();
+                  },
+                  onEdit: (index, item) {
+                    _showSalesDialog(existingItem: item, index: index);
+                  },
+                ),
+
+                ExpenseTabList(
+                  expenseItems: expenseItems,
+                  onDelete: (index) {
+                    setState(() => expenseItems.removeAt(index));
+                    ref.read(recordsProvider.notifier)
+                        .markUnsavedChanges();
+                  },
+                  onEdit: (index, item) {
+                    _showExpenseDialog(existingItem: item, index: index);
+                  },
+                ),
+
+                PurchaseTabList(
+                  purchaseItems: purchaseItems,
+                  onDelete: (index) {
+                    setState(() => purchaseItems.removeAt(index));
+                    ref.read(recordsProvider.notifier)
+                        .markUnsavedChanges();
+                  },
+                  onEdit: (index, item) {
+                    _showPurchaseDialog(existingItem: item, index: index);
+                  },
+                ),
               ],
             ),
           ),
@@ -144,6 +205,7 @@ class _CreateRecordScreenState
           onPressed: state.isLoading
               ? null
               : () {
+
                   final record = DailyRecordEntity(
                     salesItems: salesItems,
                     expenseItems: expenseItems,
@@ -158,175 +220,6 @@ class _CreateRecordScreenState
               : const Text("Submit Record"),
         ),
       ),
-    );
-  }
-
-  // ================= SUMMARY =================
-
-  Widget _buildSummarySection() {
-    final totalSales =
-        salesItems.fold<double>(0, (sum, item) => sum + item.subtotal);
-
-    final totalExpense =
-        expenseItems.fold<double>(0, (sum, item) => sum + item.subtotal);
-
-    final totalPurchases =
-        purchaseItems.fold<double>(0, (sum, item) => sum + item.subtotal);
-
-    final profit = totalSales - totalExpense;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _summaryRow("Total Sales", totalSales, Colors.green),
-              _summaryRow("Total Expense", totalExpense, Colors.red),
-              _summaryRow("Total Purchases", totalPurchases, Colors.orange),
-              const Divider(),
-              _summaryRow(
-                "Net Profit",
-                profit,
-                profit >= 0 ? Colors.green : Colors.red,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _summaryRow(String title, double amount, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title,
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(
-            "Rs ${amount.toStringAsFixed(2)}",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ================= SALES TAB =================
-
-  Widget _buildSalesTab() {
-    return ListView.builder(
-      itemCount: salesItems.length,
-      itemBuilder: (context, index) {
-        final item = salesItems[index];
-
-        return ListTile(
-          title: Text(item.itemName),
-          subtitle: Text(
-              "Qty: ${item.quantity} | Price: ${item.price} | Subtotal: ${item.subtotal}"),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(Icons.edit,
-                    color: Theme.of(context).primaryColor),
-                onPressed: () =>
-                    _showSalesDialog(existingItem: item, index: index),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () {
-                  setState(() => salesItems.removeAt(index));
-                  ref.read(recordsProvider.notifier)
-                      .markUnsavedChanges();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ================= EXPENSE TAB =================
-
-  Widget _buildExpensesTab() {
-    return ListView.builder(
-      itemCount: expenseItems.length,
-      itemBuilder: (context, index) {
-        final item = expenseItems[index];
-
-        return ListTile(
-          title: Text(item.category),
-          subtitle: Text(
-              "Qty: ${item.quantity} | Price: ${item.price} | Subtotal: ${item.subtotal}"),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(Icons.edit,
-                    color: Theme.of(context).primaryColor),
-                onPressed: () =>
-                    _showExpenseDialog(existingItem: item, index: index),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () {
-                  setState(() => expenseItems.removeAt(index));
-                  ref.read(recordsProvider.notifier)
-                      .markUnsavedChanges();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ================= PURCHASE TAB =================
-
-  Widget _buildPurchasesTab() {
-    return ListView.builder(
-      itemCount: purchaseItems.length,
-      itemBuilder: (context, index) {
-        final item = purchaseItems[index];
-
-        return ListTile(
-          title: Text(item.category),
-          subtitle: Text(
-              "Qty: ${item.quantity} | Price: ${item.price} | Subtotal: ${item.subtotal}"),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(Icons.edit,
-                    color: Theme.of(context).primaryColor),
-                onPressed: () =>
-                    _showPurchaseDialog(existingItem: item, index: index),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () {
-                  setState(() => purchaseItems.removeAt(index));
-                  ref.read(recordsProvider.notifier)
-                      .markUnsavedChanges();
-                },
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -346,155 +239,83 @@ class _CreateRecordScreenState
     }
   }
 
-  // ================= DIALOGS =================
+  // ================= SALES DIALOG =================
 
   void _showSalesDialog({SalesItem? existingItem, int? index}) {
-    final nameController =
-        TextEditingController(text: existingItem?.itemName ?? "");
-    final qtyController =
-        TextEditingController(text: existingItem?.quantity.toString() ?? "");
-    final priceController =
-        TextEditingController(text: existingItem?.price.toString() ?? "");
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title:
-            Text(existingItem == null ? "Add Sales Item" : "Edit Sales Item"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController),
-            TextField(controller: qtyController, keyboardType: TextInputType.number),
-            TextField(controller: priceController, keyboardType: TextInputType.number),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              final updatedItem = SalesItem(
-                itemName: nameController.text,
-                quantity: int.parse(qtyController.text),
-                price: double.parse(priceController.text),
-              );
+      builder: (_) => SalesItemDialog(
+        existingItem: existingItem,
+        onSave: (item) {
 
-              setState(() {
-                if (existingItem == null) {
-                  salesItems.add(updatedItem);
-                } else {
-                  salesItems[index!] = updatedItem;
-                }
-              });
+          setState(() {
 
-              ref.read(recordsProvider.notifier)
-                  .markUnsavedChanges();
+            if (existingItem == null) {
+              salesItems.add(item);
+            } else {
+              salesItems[index!] = item;
+            }
 
-              Navigator.pop(context);
-            },
-            child: Text(existingItem == null ? "Add" : "Update"),
-          )
-        ],
+          });
+
+          ref.read(recordsProvider.notifier)
+              .markUnsavedChanges();
+        },
       ),
     );
   }
+
+  // ================= EXPENSE DIALOG =================
 
   void _showExpenseDialog({ExpenseItem? existingItem, int? index}) {
-    final categoryController =
-        TextEditingController(text: existingItem?.category ?? "");
-    final qtyController =
-        TextEditingController(text: existingItem?.quantity.toString() ?? "");
-    final priceController =
-        TextEditingController(text: existingItem?.price.toString() ?? "");
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title:
-            Text(existingItem == null ? "Add Expense Item" : "Edit Expense Item"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: categoryController),
-            TextField(controller: qtyController, keyboardType: TextInputType.number),
-            TextField(controller: priceController, keyboardType: TextInputType.number),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              final updatedItem = ExpenseItem(
-                category: categoryController.text,
-                quantity: int.parse(qtyController.text),
-                price: double.parse(priceController.text),
-              );
+      builder: (_) => ExpenseItemDialog(
+        existingItem: existingItem,
+        onSave: (item) {
 
-              setState(() {
-                if (existingItem == null) {
-                  expenseItems.add(updatedItem);
-                } else {
-                  expenseItems[index!] = updatedItem;
-                }
-              });
+          setState(() {
 
-              ref.read(recordsProvider.notifier)
-                  .markUnsavedChanges();
+            if (existingItem == null) {
+              expenseItems.add(item);
+            } else {
+              expenseItems[index!] = item;
+            }
 
-              Navigator.pop(context);
-            },
-            child: Text(existingItem == null ? "Add" : "Update"),
-          )
-        ],
+          });
+
+          ref.read(recordsProvider.notifier)
+              .markUnsavedChanges();
+        },
       ),
     );
   }
 
+  // ================= PURCHASE DIALOG =================
+
   void _showPurchaseDialog({PurchaseItem? existingItem, int? index}) {
-    final categoryController =
-        TextEditingController(text: existingItem?.category ?? "");
-    final qtyController =
-        TextEditingController(text: existingItem?.quantity.toString() ?? "");
-    final priceController =
-        TextEditingController(text: existingItem?.price.toString() ?? "");
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(existingItem == null
-            ? "Add Purchase Item"
-            : "Edit Purchase Item"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: categoryController),
-            TextField(controller: qtyController, keyboardType: TextInputType.number),
-            TextField(controller: priceController, keyboardType: TextInputType.number),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              final updatedItem = PurchaseItem(
-                category: categoryController.text,
-                quantity: int.parse(qtyController.text),
-                price: double.parse(priceController.text),
-              );
+      builder: (_) => PurchaseItemDialog(
+        existingItem: existingItem,
+        onSave: (item) {
 
-              setState(() {
-                if (existingItem == null) {
-                  purchaseItems.add(updatedItem);
-                } else {
-                  purchaseItems[index!] = updatedItem;
-                }
-              });
+          setState(() {
 
-              ref.read(recordsProvider.notifier)
-                  .markUnsavedChanges();
+            if (existingItem == null) {
+              purchaseItems.add(item);
+            } else {
+              purchaseItems[index!] = item;
+            }
 
-              Navigator.pop(context);
-            },
-            child: Text(existingItem == null ? "Add" : "Update"),
-          )
-        ],
+          });
+
+          ref.read(recordsProvider.notifier)
+              .markUnsavedChanges();
+        },
       ),
     );
   }

@@ -1,30 +1,21 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:store_sync/core/api/api_client.dart';
+import 'package:store_sync/core/api/api_endpoints.dart';
 
-import '../../../../core/storage/token_storage.dart';
 import '../../domain/entities/daily_record_entity.dart';
 import '../../domain/repositories/records_repository.dart';
 
-const String baseUrl = "http://10.0.2.2:5050/api/daily-record";
-
 class RecordsRepositoryImpl implements RecordsRepository {
-  final TokenStorage _tokenStorage = TokenStorage();
+  final ApiClient _apiClient;
 
-  // ===============================
-  // CREATE OR UPDATE TODAY RECORD
-  // ===============================
+  RecordsRepositoryImpl(this._apiClient);
+
+  // ============================================
+  // CREATE OR UPDATE TODAY RECORD  (POST)
+  // ============================================
   @override
   Future<void> createOrUpdateTodayRecord(
     DailyRecordEntity record,
   ) async {
-    final token = await _tokenStorage.getToken();
-
-    if (token == null) {
-      throw Exception("User not authenticated");
-    }
-
-    final url = Uri.parse("$baseUrl/today");
-
     final requestBody = {
       "salesItems": record.salesItems
           .map((item) => {
@@ -52,54 +43,26 @@ class RecordsRepositoryImpl implements RecordsRepository {
           .toList(),
     };
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode(requestBody),
+    await _apiClient.post(
+      ApiEndpoints.todayRecord,
+      body: requestBody,
+      requiresAuth: true,
     );
-
-    final responseBody = jsonDecode(response.body);
-
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception(responseBody["message"] ?? "Failed to submit record");
-    }
   }
 
-  // ===============================
-  // GET TODAY RECORD
-  // ===============================
+  // ============================================
+  // GET TODAY RECORD  (GET)
+  // ============================================
   @override
   Future<DailyRecordEntity?> getTodayRecord() async {
-    final token = await _tokenStorage.getToken();
-
-    if (token == null) {
-      throw Exception("User not authenticated");
-    }
-
-    final url = Uri.parse("$baseUrl/today");
-
-    final response = await http.get(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
+    final response = await _apiClient.get(
+      ApiEndpoints.todayRecord,
+      requiresAuth: true,
     );
 
-    if (response.statusCode == 404) {
-      return null;
-    }
+    final data = response["data"];
 
-    final responseBody = jsonDecode(response.body);
-
-    if (response.statusCode != 200) {
-      throw Exception(responseBody["message"] ?? "Failed to fetch record");
-    }
-
-    final data = responseBody["data"] ?? {};
+    if (data == null) return null;
 
     final sales = (data["salesItems"] as List?) ?? [];
     final expenses = (data["expenseItems"] as List?) ?? [];
@@ -108,22 +71,22 @@ class RecordsRepositoryImpl implements RecordsRepository {
     return DailyRecordEntity(
       salesItems: sales.map((item) {
         return SalesItem(
-          itemName: (item["itemName"] ?? "") as String,
-          quantity: (item["quantity"] ?? 0) as int,
+          itemName: item["itemName"] ?? "",
+          quantity: item["quantity"] ?? 0,
           price: (item["price"] ?? 0).toDouble(),
         );
       }).toList(),
       expenseItems: expenses.map((item) {
         return ExpenseItem(
-          category: (item["category"] ?? "") as String,
-          quantity: (item["quantity"] ?? 0) as int,
+          category: item["category"] ?? "",
+          quantity: item["quantity"] ?? 0,
           price: (item["price"] ?? 0).toDouble(),
         );
       }).toList(),
       purchaseItems: purchases.map((item) {
         return PurchaseItem(
-          category: (item["category"] ?? "") as String,
-          quantity: (item["quantity"] ?? 0) as int,
+          category: item["category"] ?? "",
+          quantity: item["quantity"] ?? 0,
           price: (item["price"] ?? 0).toDouble(),
         );
       }).toList(),
@@ -136,32 +99,17 @@ class RecordsRepositoryImpl implements RecordsRepository {
     );
   }
 
-  // ===============================
-  // GET ALL RECORDS (HISTORY)
-  // ===============================
+  // ============================================
+  // GET ALL RECORDS (HISTORY)  (GET)
+  // ============================================
   @override
   Future<List<DailyRecordEntity>> getAllRecords() async {
-    final token = await _tokenStorage.getToken();
-
-    if (token == null) {
-      throw Exception("User not authenticated");
-    }
-
-    final response = await http.get(
-      Uri.parse("$baseUrl/history"),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
+    final response = await _apiClient.get(
+      ApiEndpoints.historyRecord,
+      requiresAuth: true,
     );
 
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode != 200) {
-      throw Exception(body["message"] ?? "Failed to fetch history");
-    }
-
-    final List records = body["data"] ?? [];
+    final List records = response["data"] ?? [];
 
     return records.map((data) {
       return DailyRecordEntity(
