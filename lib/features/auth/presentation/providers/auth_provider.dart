@@ -1,10 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:store_sync/core/api/api_client.dart';
+import 'package:store_sync/core/storage/token_storage.dart';
 
-import '../../domain/usecases/login_usecase.dart';
 import '../../domain/entities/user_entity.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 
+
+// =====================
+// STATE
+// =====================
 class AuthState {
   final bool isLoading;
   final UserEntity? user;
@@ -29,13 +36,19 @@ class AuthState {
   }
 }
 
+
+// =====================
+// NOTIFIER
+// =====================
 class AuthNotifier extends StateNotifier<AuthState> {
   final LoginUseCase loginUseCase;
   final LogoutUseCase logoutUseCase;
+  final AuthRepository repository;
 
   AuthNotifier(
     this.loginUseCase,
     this.logoutUseCase,
+    this.repository,
   ) : super(AuthState());
 
   // =======================
@@ -51,10 +64,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         state = state.copyWith(user: user, isLoading: false);
       } else {
         state = state.copyWith(
-            error: "Invalid email or password", isLoading: false);
+          error: "Invalid email or password",
+          isLoading: false,
+        );
       }
     } catch (e) {
-      state = state.copyWith(error: e.toString(), isLoading: false);
+      state = state.copyWith(
+        error: e.toString(),
+        isLoading: false,
+      );
     }
   }
 
@@ -68,8 +86,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final repository = AuthRepositoryImpl();
-
       await repository.changePassword(
         currentPassword,
         newPassword,
@@ -91,7 +107,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> updateProfileImage(String imageUrl) async {
     if (state.user == null) return;
 
-    final updatedUser = state.user!.copyWith(profileImage: imageUrl);
+    final updatedUser =
+        state.user!.copyWith(profileImage: imageUrl);
 
     state = state.copyWith(user: updatedUser);
   }
@@ -105,12 +122,54 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-// Provider
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final repository = AuthRepositoryImpl();
+
+// =====================
+// PROVIDERS
+// =====================
+
+// Token Storage
+final tokenStorageProvider =
+    Provider<TokenStorage>((ref) => TokenStorage());
+
+// Api Client
+final apiClientProvider =
+    Provider<ApiClient>((ref) {
+  final tokenStorage = ref.read(tokenStorageProvider);
+  return ApiClient(tokenStorage);
+});
+
+// Repository
+final authRepositoryProvider =
+    Provider<AuthRepository>((ref) {
+  final apiClient = ref.read(apiClientProvider);
+  final tokenStorage = ref.read(tokenStorageProvider);
+
+  return AuthRepositoryImpl(apiClient, tokenStorage);
+});
+
+// UseCases
+final loginUseCaseProvider =
+    Provider<LoginUseCase>((ref) {
+  final repository = ref.read(authRepositoryProvider);
+  return LoginUseCase(repository);
+});
+
+final logoutUseCaseProvider =
+    Provider<LogoutUseCase>((ref) {
+  final repository = ref.read(authRepositoryProvider);
+  return LogoutUseCase(repository);
+});
+
+// Main Auth Provider
+final authProvider =
+    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  final loginUseCase = ref.read(loginUseCaseProvider);
+  final logoutUseCase = ref.read(logoutUseCaseProvider);
+  final repository = ref.read(authRepositoryProvider);
 
   return AuthNotifier(
-    LoginUseCase(repository),
-    LogoutUseCase(repository),
+    loginUseCase,
+    logoutUseCase,
+    repository,
   );
 });

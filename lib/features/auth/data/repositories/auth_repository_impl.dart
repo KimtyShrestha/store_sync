@@ -1,18 +1,15 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
 import '../../../../core/storage/token_storage.dart';
 
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 
-// Android emulator localhost URL
-const String baseUrl = "http://10.0.2.2:5050/api/auth";
-
 class AuthRepositoryImpl implements AuthRepository {
+  final ApiClient _apiClient;
+  final TokenStorage _tokenStorage;
 
-  final TokenStorage _tokenStorage = TokenStorage();
-  AuthRepositoryImpl();
+  AuthRepositoryImpl(this._apiClient, this._tokenStorage);
 
   // =======================
   // SIGNUP
@@ -24,26 +21,17 @@ class AuthRepositoryImpl implements AuthRepository {
     String email,
     String password,
   ) async {
-    final url = Uri.parse("$baseUrl/register");
-
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
+    final body = await _apiClient.post(
+      ApiEndpoints.register,
+      body: {
         "firstName": firstName,
         "lastName": lastName,
         "email": email,
         "password": password,
         "confirmPassword": password,
         "role": "manager",
-      }),
+      },
     );
-
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode != 201) {
-      throw Exception(body["message"] ?? "Signup failed");
-    }
 
     final user = body["data"];
 
@@ -64,22 +52,13 @@ class AuthRepositoryImpl implements AuthRepository {
   // =======================
   @override
   Future<UserEntity?> login(String email, String password) async {
-    final url = Uri.parse("$baseUrl/login");
-
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
+    final body = await _apiClient.post(
+      ApiEndpoints.login,
+      body: {
         "email": email,
         "password": password,
-      }),
+      },
     );
-
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode != 200) {
-      throw Exception(body["message"] ?? "Invalid credentials");
-    }
 
     final user = body["data"];
     final token = body["token"];
@@ -102,32 +81,19 @@ class AuthRepositoryImpl implements AuthRepository {
   // =======================
   // CHANGE PASSWORD
   // =======================
+  @override
   Future<void> changePassword(
     String currentPassword,
     String newPassword,
   ) async {
-
-    final token = await _tokenStorage.getToken();
-
-    final url = Uri.parse("$baseUrl/change-password");
-
-    final response = await http.patch(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode({
+    await _apiClient.patch(
+      ApiEndpoints.changePassword,
+      body: {
         "currentPassword": currentPassword,
         "newPassword": newPassword,
-      }),
+      },
+      requiresAuth: true,
     );
-
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode != 200) {
-      throw Exception(body["message"] ?? "Password change failed");
-    }
   }
 
   // =======================
@@ -137,11 +103,6 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> logout() async {
     await _tokenStorage.clearToken();
 
-    final url = Uri.parse("$baseUrl/logout");
-
-    await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-    );
+    await _apiClient.post(ApiEndpoints.logout);
   }
 }
